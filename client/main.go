@@ -15,7 +15,7 @@ import (
 
 var sendCount = int64(0)
 var recvCount = int64(0)
-var maxClientNum = 5e3
+var maxClientNum = 5000
 
 var multiMode = 0  // 大量客户端，均发送消息
 var singleMode = 1 // 大量客户端，只有一个客户端在发送消息
@@ -56,8 +56,9 @@ func RunClient(runMode int) {
 	}()
 
 	go func() {
-		time.Sleep(time.Second * 30)
-		for range time.NewTicker(time.Millisecond).C {
+		time.Sleep(time.Second * 20)
+		// for range time.NewTicker(time.Microsecond).C {
+		for {
 			// size is the same as application protocol on tcp
 			write, err := stream.Write([]byte("hello 123456789"))
 			if err != nil {
