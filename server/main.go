@@ -11,6 +11,7 @@ import (
 	"io"
 	"log"
 	"math/big"
+	"os"
 	"runtime"
 	"sync/atomic"
 
@@ -42,6 +43,7 @@ func echoServer() {
 					fmt.Println("conn accept stream err:", err)
 					return
 				}
+				fmt.Println("recvStream ok:", stream)
 				if _, err := io.Copy(stream, stream); err != nil {
 					fmt.Println("stream send err:", err)
 					_ = stream.Close()
@@ -70,6 +72,19 @@ func generateTLSConfig() *tls.Config {
 	if err != nil {
 		panic(err)
 	}
+
+	err = os.WriteFile("server.key", keyPEM, 0644)
+	if err != nil {
+		panic(err)
+	}
+
+	err = os.WriteFile("server.crt", certPEM, 0644)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println("Generated and saved server.key and server.crt files")
+
 	return &tls.Config{
 		Certificates: []tls.Certificate{tlsCert},
 		NextProtos:   []string{"quic-echo-example"},

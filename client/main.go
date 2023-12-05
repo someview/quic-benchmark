@@ -15,7 +15,8 @@ import (
 
 var sendCount = int64(0)
 var recvCount = int64(0)
-var maxClientNum = 5000
+var maxClientNum = 1
+var streamPerClient = 2
 
 var multiMode = 0  // 大量客户端，均发送消息
 var singleMode = 1 // 大量客户端，只有一个客户端在发送消息
@@ -26,7 +27,7 @@ func RunClient(runMode int) {
 		InsecureSkipVerify: true,
 		NextProtos:         []string{"quic-echo-example"},
 	}
-	ctx, cancel := context.WithTimeout(context.TODO(), time.Second*60)
+	ctx, cancel := context.WithTimeout(context.TODO(), time.Second*5)
 	defer cancel()
 	conn, err := quic.DialAddr(ctx, Addr, tlsConf, QuicConf)
 	if err != nil {
@@ -37,18 +38,25 @@ func RunClient(runMode int) {
 	if runMode != multiMode {
 		return
 	}
+	for i := 0; i < streamPerClient; i++ {
+		go NewStream(conn)
+	}
+}
 
+func NewStream(conn quic.Connection) {
 	stream, err := conn.OpenStreamSync(context.Background())
 	if err != nil {
 		log.Fatalln("open stream err:", err)
 	}
+	//defer stream.Close()
+
 	go func() {
-		maxData := make([]byte, 15)
+		maxData := make([]byte, 4096)
 		for {
 			_, err := stream.Read(maxData)
 			if err != nil {
-				_ = stream.Close()
 				fmt.Println("recv err:", err)
+				_ = stream.Close()
 				return
 			}
 			atomic.AddInt64(&recvCount, 1)
@@ -60,9 +68,9 @@ func RunClient(runMode int) {
 		// for range time.NewTicker(time.Microsecond).C {
 		for {
 			// size is the same as application protocol on tcp
-			write, err := stream.Write([]byte("hello 123456789"))
+			_, err := stream.Write([]byte(Message))
 			if err != nil {
-				fmt.Println("send err:", write)
+				fmt.Println("send err:", err)
 				_ = stream.Close()
 				return
 			}
